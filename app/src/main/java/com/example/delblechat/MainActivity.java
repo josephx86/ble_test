@@ -44,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private final BluetoothWatcher bluetoothWatcher = new BluetoothWatcher(this::runChecks);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,25 +53,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         preferencesHelper = BleChat.getInstance().getPreferencesHelper();
         setListeners();
+        registerReceiver(bluetoothWatcher, bluetoothHelper.getBroadcastFilter());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         paused = false;
-        if (!bluetoothHelper.supportsMultipleAdvertisement()) {
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.unsupported_device)
-                    .setMessage(R.string.unsupported_device_message)
-                    .setPositiveButton(android.R.string.ok, (dialog, i) -> {
-                        dialog.dismiss();
-                        MainActivity.this.finish();
-                    })
-                    .show();
-        } else {
-            enableLocationUpdates();
-            runChecks();
-        }
+        enableLocationUpdates();
+        runChecks();
     }
 
     @Override
@@ -80,6 +72,12 @@ public class MainActivity extends AppCompatActivity {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
             fusedLocationProviderClient = null;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(bluetoothWatcher);
     }
 
     private void setListeners() {
@@ -103,7 +101,19 @@ public class MainActivity extends AppCompatActivity {
         } else if (mustTurnOnBluetooth()) {
             showActions(false, false, false, true);
         } else {
-            openScanner();
+            // Check for BLE support when certain that bluetooth is turned on.
+            if (!bluetoothHelper.supportsBle()) {
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.unsupported_device)
+                        .setMessage(R.string.unsupported_device_message)
+                        .setPositiveButton(android.R.string.ok, (dialog, i) -> {
+                            dialog.dismiss();
+                            MainActivity.this.finish();
+                        })
+                        .show();
+            } else {
+                openScanner();
+            }
         }
     }
 

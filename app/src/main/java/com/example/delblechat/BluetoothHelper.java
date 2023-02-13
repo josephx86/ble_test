@@ -2,8 +2,10 @@ package com.example.delblechat;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 
 public class BluetoothHelper {
     private BluetoothAdapter adapter;
@@ -15,12 +17,13 @@ public class BluetoothHelper {
         }
     }
 
-    public boolean supportsMultipleAdvertisement() {
-        boolean supported = false;
+    public boolean supportsBle() {
+        BluetoothLeAdvertiser advertiser = null;
         if (adapter != null) {
-            supported = adapter.isMultipleAdvertisementSupported();
+            // getBluetoothLeAdvertiser() will return null if Bluetooth is off!
+            advertiser = adapter.getBluetoothLeAdvertiser();
         }
-        return supported;
+        return advertiser != null;
     }
 
     public boolean isBluetoothOn() {
@@ -33,5 +36,9 @@ public class BluetoothHelper {
 
     public Intent getEnablingIntent() {
         return new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+    }
+
+    public IntentFilter getBroadcastFilter() {
+        return new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
     }
 }
