@@ -8,43 +8,28 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.delblechat.databinding.ActivityMainBinding;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationAvailability;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
-
-    private FusedLocationProviderClient fusedLocationProviderClient;
     private PreferencesHelper preferencesHelper;
 
     private ActivityMainBinding binding;
     private boolean paused = false;
     private final BluetoothHelper bluetoothHelper = new BluetoothHelper();
-
-    private final LocationCallback locationCallback = new LocationCallback() {
-        @Override
-        public void onLocationAvailability(@NonNull LocationAvailability locationAvailability) {
-            super.onLocationAvailability(locationAvailability);
-            runChecks();
-        }
-    };
-
     private final BluetoothWatcher bluetoothWatcher = new BluetoothWatcher(this::runChecks);
+    private ScheduledFuture<?> checkerHandle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,13 +39,20 @@ public class MainActivity extends AppCompatActivity {
         preferencesHelper = BleChat.getInstance().getPreferencesHelper();
         setListeners();
         registerReceiver(bluetoothWatcher, bluetoothHelper.getBroadcastFilter());
+        checkerHandle = Executors
+                .newSingleThreadScheduledExecutor()
+                .scheduleAtFixedRate(
+                        () -> runOnUiThread(MainActivity.this::runChecks),
+                        0,
+                        500,
+                        TimeUnit.MILLISECONDS
+                );
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         paused = false;
-        enableLocationUpdates();
         runChecks();
     }
 
@@ -68,16 +60,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         paused = true;
-        if (fusedLocationProviderClient != null) {
-            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
-            fusedLocationProviderClient = null;
-        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(bluetoothWatcher);
+        checkerHandle.cancel(true);
     }
 
     private void setListeners() {
@@ -121,27 +110,6 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, ScanActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-    }
-
-    private void enableLocationUpdates() {
-        if (fusedLocationProviderClient != null) {
-            return;
-        }
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocationProviderClient.requestLocationUpdates(
-                new LocationRequest.Builder(400)
-                        .setMaxUpdates(1000000)
-                        .setMaxUpdateDelayMillis(100)
-                        .setMinUpdateIntervalMillis(400)
-                        .build(),
-                locationCallback,
-                Looper.getMainLooper()
-        );
     }
 
     private void askLocationPermission() {
