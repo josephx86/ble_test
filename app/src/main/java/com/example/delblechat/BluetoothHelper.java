@@ -3,6 +3,7 @@ package com.example.delblechat;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
+import android.content.Intent;
 
 public class BluetoothHelper {
     private BluetoothAdapter adapter;
@@ -20,5 +21,17 @@ public class BluetoothHelper {
             supported = adapter.isMultipleAdvertisementSupported();
         }
         return supported;
+    }
+
+    public boolean isBluetoothOn() {
+        boolean isOn = false;
+        if (adapter != null) {
+            isOn = adapter.isEnabled();
+        }
+        return isOn;
+    }
+
+    public Intent getEnablingIntent() {
+        return new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
     }
 }

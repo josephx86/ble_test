@@ -86,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
         binding.bluetoothButton.setOnClickListener(v -> openSettings());
         binding.locationButton.setOnClickListener(v -> openSettings());
         binding.locationStateButton.setOnClickListener(v -> openLocationSettings());
+        binding.bluetoothStateButton.setOnClickListener(v -> startActivity(bluetoothHelper.getEnablingIntent()));
     }
 
     private void runChecks() {
@@ -96,9 +97,11 @@ public class MainActivity extends AppCompatActivity {
         if (getNeedsLocationPermission()) {
             askLocationPermission();
         } else if (mustTurnOnLocationService()) {
-            showActions(false, true, needsBluetoothPermissions());
+            showActions(false, true, needsBluetoothPermissions(), mustTurnOnBluetooth());
         } else if (needsBluetoothPermissions()) {
             askBluetoothPermissions();
+        } else if (mustTurnOnBluetooth()) {
+            showActions(false, false, false, true);
         } else {
             openScanner();
         }
@@ -141,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                         .setMessage(message)
                         .setNegativeButton(android.R.string.cancel, (dialog, i) -> {
                             dialog.dismiss();
-                            showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions());
+                            showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions(), mustTurnOnBluetooth());
                         })
                         .setPositiveButton(R.string.grant_permission, (dialog, i) -> {
                             dialog.dismiss();
@@ -157,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
                             .setCancelable(false)
                             .setNegativeButton(android.R.string.cancel, (dialog, i) -> {
                                 dialog.dismiss();
-                                showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions());
+                                showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions(), mustTurnOnBluetooth());
                             })
                             .setPositiveButton(R.string.open_settings, ((dialog, which) -> {
                                 dialog.dismiss();
@@ -188,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
                         .setMessage(message)
                         .setNegativeButton(android.R.string.cancel, (dialog, i) -> {
                             dialog.dismiss();
-                            showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions());
+                            showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions(), mustTurnOnBluetooth());
                         })
                         .setPositiveButton(R.string.grant_permission, (dialog, i) -> {
                             dialog.dismiss();
@@ -206,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
                             .setNegativeButton(android.R.string.cancel, (dialog, i) -> {
                                 dialog.dismiss();
                                 dialog.dismiss();
-                                showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions());
+                                showActions(mustTurnOnLocationService(), mustTurnOnLocationService(), needsBluetoothPermissions(), mustTurnOnBluetooth());
                             })
                             .setPositiveButton(R.string.open_settings, ((dialog, which) -> {
                                 dialog.dismiss();
@@ -262,14 +265,19 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void showActions(boolean locationPermission, boolean locationState, boolean bluetoothPermission) {
-        if (!locationPermission && !locationState && !bluetoothPermission) {
+    private boolean mustTurnOnBluetooth() {
+        return !bluetoothHelper.isBluetoothOn();
+    }
+
+    private void showActions(boolean locationPermission, boolean locationOff, boolean bluetoothPermission, boolean bluetoothOff) {
+        if (!locationPermission && !locationOff && !bluetoothPermission && !bluetoothOff) {
             return;
         }
         binding.title.setVisibility(View.VISIBLE);
         binding.locationButton.setVisibility(locationPermission ? View.VISIBLE : View.GONE);
         binding.bluetoothButton.setVisibility(bluetoothPermission ? View.VISIBLE : View.GONE);
-        binding.locationStateButton.setVisibility(locationState ? View.VISIBLE : View.GONE);
+        binding.locationStateButton.setVisibility(locationOff ? View.VISIBLE : View.GONE);
+        binding.bluetoothStateButton.setVisibility(bluetoothOff ? View.VISIBLE : View.GONE);
     }
 
     private void hideActions() {
@@ -277,6 +285,7 @@ public class MainActivity extends AppCompatActivity {
         binding.locationButton.setVisibility(View.INVISIBLE);
         binding.bluetoothButton.setVisibility(View.INVISIBLE);
         binding.locationStateButton.setVisibility(View.INVISIBLE);
+        binding.bluetoothStateButton.setVisibility(View.INVISIBLE);
     }
 
     private boolean needsBluetoothPermissions() {
