@@ -1,4 +1,4 @@
-package com.example.delblechat;
+package com.example.delblechat.activity;
 
 import android.Manifest;
 import android.content.Context;
@@ -15,7 +15,11 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.delblechat.R;
 import com.example.delblechat.databinding.ActivityMainBinding;
+import com.example.delblechat.helper.BluetoothHelper;
+import com.example.delblechat.helper.PreferencesHelper;
+import com.example.delblechat.model.BluetoothWatcher;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -23,11 +27,11 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
-    private PreferencesHelper preferencesHelper;
 
     private ActivityMainBinding binding;
     private boolean paused = false;
-    private final BluetoothHelper bluetoothHelper = new BluetoothHelper();
+    private final BluetoothHelper bluetoothHelper = BluetoothHelper.getInstance();
+    private final PreferencesHelper preferencesHelper = PreferencesHelper.getInstance();
     private final BluetoothWatcher bluetoothWatcher = new BluetoothWatcher(this::runChecks);
     private ScheduledFuture<?> checkerHandle;
 
@@ -36,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        preferencesHelper = BleChat.getInstance().getPreferencesHelper();
         setListeners();
         registerReceiver(bluetoothWatcher, bluetoothHelper.getBroadcastFilter());
         checkerHandle = Executors
@@ -283,7 +286,6 @@ public class MainActivity extends AppCompatActivity {
             return new String[]{
                     Manifest.permission.BLUETOOTH_SCAN,
                     Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.BLUETOOTH_ADVERTISE,
             };
         }
         return new String[0];

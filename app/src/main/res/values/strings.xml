@@ -15,4 +15,6 @@
     <string name="unsupported_device">Unsupported device</string>
     <string name="unsupported_device_message">This device does not support Bluetooth LE.\nTry running the app on a newer device</string>
     <string name="enable_bluetooth">Enable bluetooth</string>
+    <string name="scan">Scan</string>
+    <string name="stop">Stop (%d)</string>
 </resources>

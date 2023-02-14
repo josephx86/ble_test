@@ -1,9 +1,11 @@
-package com.example.delblechat;
+package com.example.delblechat.model;
 
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+
+import com.example.delblechat.callback.VoidCallback;
 
 public class BluetoothWatcher extends BroadcastReceiver {
     private final VoidCallback callback;

@@ -1,4 +1,4 @@
-package com.example.delblechat;
+package com.example.delblechat.callback;
 
 public interface VoidCallback {
     void handler();

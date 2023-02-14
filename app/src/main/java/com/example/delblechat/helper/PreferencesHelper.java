@@ -1,17 +1,27 @@
-package com.example.delblechat;
+package com.example.delblechat.helper;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 
 import androidx.preference.PreferenceManager;
+
+import com.example.delblechat.BleChat;
 
 public class PreferencesHelper {
     private final SharedPreferences preferences;
     private static final String PREF_LOCATION_REQUESTED = "location_requested";
     private static final String PREF_BLUETOOTH_REQUESTED = "bluetooth_requested";
 
-    public PreferencesHelper(Context context) {
-        preferences = PreferenceManager.getDefaultSharedPreferences(context);
+    private static PreferencesHelper instance;
+
+    public static PreferencesHelper getInstance() {
+        if (instance == null) {
+            instance = new PreferencesHelper();
+        }
+        return instance;
+    }
+
+    private PreferencesHelper() {
+        preferences = PreferenceManager.getDefaultSharedPreferences(BleChat.getInstance());
     }
 
     public void setBluetoothRequested() {
