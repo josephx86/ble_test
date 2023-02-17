@@ -2,6 +2,7 @@ package com.example.delblechat.helper;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.content.Context;
@@ -10,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.delblechat.BleChat;
@@ -26,7 +28,7 @@ public class BluetoothHelper {
     private final BluetoothManager bluetoothManager;
     private final int SCAN_DURATION = 30; // Seconds
     private int scannerElapsed = 0;
-    private ScheduledFuture<?> scannerExecutorHandle;
+    private ScheduledFuture<?> executorHandle;
 
     public static BluetoothHelper getInstance() {
         if (instance == null) {
@@ -76,7 +78,18 @@ public class BluetoothHelper {
     }
 
     public boolean isScanning() {
-        return scannerExecutorHandle != null;
+        return isScanningClassic() || (executorHandle != null);
+    }
+
+    public boolean isScanningClassic() {
+        boolean scanningClassic = false;
+        BluetoothAdapter adapter = getAdapter();
+        if (adapter != null) {
+            if (ActivityCompat.checkSelfPermission(BleChat.getInstance(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+                scanningClassic = adapter.isDiscovering();
+            }
+        }
+        return scanningClassic;
     }
 
     public Intent getEnablingIntent() {
@@ -87,30 +100,82 @@ public class BluetoothHelper {
         return new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
     }
 
-    public String startLeScan(Context context, IntCallback callback, ScanResultsHandler handler) {
-        BluetoothLeScanner scanner = getScanner();
-
-        if (scanner != null) {
-            if (scannerExecutorHandle != null) {
-                stopExecutor();
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        return null;
-                    }
-                }
-                scanner.stopScan(handler);
-                if (callback != null) {
-                    callback.handler(-1);
-                }
-                return null;
+    private String stopScan(ScanResultsHandler handler, IntCallback callback) {
+        if (ContextCompat.checkSelfPermission(BleChat.getInstance(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                return "Set bluetooth permissions in app settings!";
             }
+        }
+        if (isScanningClassic()) {
+            BluetoothAdapter adapter = getAdapter();
+            if (adapter != null) {
+                adapter.cancelDiscovery();
+            }
+        }
+        if (executorHandle != null) {
+            BluetoothLeScanner scanner = getScanner();
+            if (scanner != null) {
+                scanner.stopScan(handler);
+            }
+        }
+        stopExecutor();
+        if (callback != null) {
+            callback.handler(-1);
+        }
+        return null;
+    }
+
+    public String startScan(boolean scanningLe, IntCallback callback, ScanResultsHandler handler) {
+        if (isScanning()) {
+            return stopScan(handler, callback);
+        } else if (scanningLe) {
+            return startLeScan(callback, handler);
+        } else {
+            return startClassicScan(callback, handler);
+        }
+    }
+
+    private String startClassicScan(IntCallback callback, ScanResultsHandler handler) {
+        BluetoothAdapter adapter = getAdapter();
+        final Context context = BleChat.getInstance().getApplicationContext();
+        if (adapter != null) {
             if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     return "Set bluetooth permissions in app settings!";
                 }
             }
             scannerElapsed = 0;
-            scannerExecutorHandle = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            executorHandle = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+                if (scannerElapsed >= SCAN_DURATION) {
+                    stopScan(handler, callback);
+                    return;
+                }
+                scannerElapsed++;
+                if (callback != null) {
+                    callback.handler(SCAN_DURATION - scannerElapsed);
+                }
+            }, 0, 1, TimeUnit.SECONDS);
+
+            for (BluetoothDevice device: adapter.getBondedDevices()) {
+                handler.checkDevice(device);
+            }
+
+            adapter.startDiscovery();
+        }
+        return null;
+    }
+
+    private String startLeScan(IntCallback callback, ScanResultsHandler handler) {
+        BluetoothLeScanner scanner = getScanner();
+        final Context context = BleChat.getInstance().getApplicationContext();
+        if (scanner != null) {
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    return "Set bluetooth permissions in app settings!";
+                }
+            }
+            scannerElapsed = 0;
+            executorHandle = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
                 if (scannerElapsed >= SCAN_DURATION) {
                     scanner.stopScan(handler);
                     stopExecutor();
@@ -126,9 +191,9 @@ public class BluetoothHelper {
     }
 
     private void stopExecutor() {
-        if (scannerExecutorHandle != null) {
-            scannerExecutorHandle.cancel(true);
+        if (executorHandle != null) {
+            executorHandle.cancel(true);
         }
-        scannerExecutorHandle = null;
+        executorHandle = null;
     }
 }

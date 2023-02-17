@@ -17,4 +17,6 @@
     <string name="enable_bluetooth">Enable bluetooth</string>
     <string name="scan">Scan</string>
     <string name="stop">Stop (%d)</string>
+    <string name="bluetooth_classic">Bluetooth Classic</string>
+    <string name="bluetooth_low_energy">Bluetooth Low Energy</string>
 </resources>

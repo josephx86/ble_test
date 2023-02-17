@@ -24,7 +24,6 @@ public class ScanResultsHandler extends ScanCallback {
     public void onScanResult(int callbackType, ScanResult result) {
         super.onScanResult(callbackType, result);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int f = result.getPeriodicAdvertisingInterval();
             if (result.isConnectable()) {
                 checkDevice(result.getDevice());
             }
@@ -33,7 +32,7 @@ public class ScanResultsHandler extends ScanCallback {
         }
     }
 
-    private void checkDevice(BluetoothDevice device) {
+    public void checkDevice(BluetoothDevice device) {
         if (device == null) {
             return;
         }
